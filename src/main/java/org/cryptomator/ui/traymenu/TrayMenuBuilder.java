@@ -68,6 +68,7 @@ public class TrayMenuBuilder {
 		try {
 			trayMenu.showTrayIcon(loader -> {
 				switch (loader) {
+					case TrayIconLoader.WindowsIcoPath l -> l.loadIcoPath(getAppropriateWindowsTrayIconPath());
 					case TrayIconLoader.PngData l -> l.loadPng(getAppropriateTrayIconImage());
 					case TrayIconLoader.FreedesktopIconName l -> l.lookupByName(getAppropriateFreedesktopIconName());
 				}
@@ -92,6 +93,7 @@ public class TrayMenuBuilder {
 		assert Platform.isFxApplicationThread();
 		trayMenu.updateTrayIcon(loader -> {
 			switch (loader) {
+				case TrayIconLoader.WindowsIcoPath l -> l.loadIcoPath(getAppropriateWindowsTrayIconPath());
 				case TrayIconLoader.PngData l -> l.loadPng(getAppropriateTrayIconImage());
 				case TrayIconLoader.FreedesktopIconName l -> l.lookupByName(getAppropriateFreedesktopIconName());
 			}
@@ -187,5 +189,19 @@ public class TrayMenuBuilder {
 	private String getAppropriateFreedesktopIconName() {
 		boolean isAnyVaultUnlocked = vaults.stream().anyMatch(Vault::isUnlocked);
 		return isAnyVaultUnlocked ? "org.cryptomator.Cryptomator.tray-unlocked-symbolic" : "org.cryptomator.Cryptomator.tray-symbolic";
+	}
+
+	private String getAppropriateWindowsTrayIconPath() {
+		boolean isAnyVaultUnlocked = vaults.stream().anyMatch(Vault::isUnlocked);
+		String resourceName = isAnyVaultUnlocked ? "/img/tray_icon_unlocked.ico" : "/img/tray_icon.ico";
+
+		var url = getClass().getResource(resourceName);
+		if (url == null) {
+			throw new IllegalStateException("Tray icon resource not found: " + resourceName);
+		}
+		if (!"file".equalsIgnoreCase(url.getProtocol())) {
+			throw new IllegalStateException("Windows tray icon must be available as a file: " + resourceName);
+		}
+		return java.nio.file.Path.of(url.getPath()).toString();
 	}
 }
