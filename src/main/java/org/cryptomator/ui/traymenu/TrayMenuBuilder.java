@@ -195,13 +195,17 @@ public class TrayMenuBuilder {
 		boolean isAnyVaultUnlocked = vaults.stream().anyMatch(Vault::isUnlocked);
 		String resourceName = isAnyVaultUnlocked ? "/img/tray_icon_unlocked.ico" : "/img/tray_icon.ico";
 
-		var url = getClass().getResource(resourceName);
-		if (url == null) {
-			throw new IllegalStateException("Tray icon resource not found: " + resourceName);
+		try (var in = getClass().getResourceAsStream(resourceName)) {
+			if (in == null) {
+				throw new IllegalStateException("Tray icon resource not found: " + resourceName);
+			}
+
+			var tempFile = java.nio.file.Files.createTempFile("cryptomator-tray-", ".ico");
+			tempFile.toFile().deleteOnExit();
+			java.nio.file.Files.copy(in, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+			return tempFile.toAbsolutePath().toString();
+		} catch (java.io.IOException e) {
+			throw new java.io.UncheckedIOException("Failed to prepare Windows tray icon: " + resourceName, e);
 		}
-		if (!"file".equalsIgnoreCase(url.getProtocol())) {
-			throw new IllegalStateException("Windows tray icon must be available as a file: " + resourceName);
-		}
-		return java.nio.file.Path.of(url.getPath()).toString();
 	}
 }
